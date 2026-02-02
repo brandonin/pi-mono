@@ -1,6 +1,7 @@
 export * from "./api-registry.js";
 export * from "./env-api-keys.js";
 export * from "./models.js";
+export * from "./otel/index.js";
 export * from "./providers/anthropic.js";
 export * from "./providers/azure-openai-responses.js";
 export * from "./providers/google.js";

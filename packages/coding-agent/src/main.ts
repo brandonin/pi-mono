@@ -5,7 +5,7 @@
  * createAgentSession() options. The SDK does the heavy lifting.
  */
 
-import { type ImageContent, modelsAreEqual, supportsXhigh } from "@mariozechner/pi-ai";
+import { type ImageContent, modelsAreEqual, supportsXhigh, initializeOtel, shutdownOtel } from "@mariozechner/pi-ai";
 import chalk from "chalk";
 import { createInterface } from "readline";
 import { type Args, parseArgs, printHelp } from "./cli/args.js";
@@ -449,6 +449,9 @@ async function handleConfigCommand(args: string[]): Promise<boolean> {
 }
 
 export async function main(args: string[]) {
+	// Initialize OpenTelemetry if enabled via environment variables
+	initializeOtel();
+
 	if (await handlePackageCommand(args)) {
 		return;
 	}
