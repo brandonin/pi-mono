@@ -35,6 +35,7 @@ Pi runs in four modes: interactive, print or JSON, RPC for process integration, 
   - [Extensions](#extensions)
   - [Themes](#themes)
   - [Pi Packages](#pi-packages)
+- [OpenTelemetry (OTEL)](#opentelemetry-otel)
 - [Programmatic Usage](#programmatic-usage)
 - [Philosophy](#philosophy)
 - [CLI Reference](#cli-reference)
@@ -355,6 +356,71 @@ Create a package by adding a `pi` key to `package.json`:
 Without a `pi` manifest, pi auto-discovers from conventional directories (`extensions/`, `skills/`, `prompts/`, `themes/`).
 
 See [docs/packages.md](docs/packages.md).
+
+---
+
+## OpenTelemetry (OTEL)
+
+Pi supports OpenTelemetry tracing for all LLM API calls, allowing you to monitor usage, performance, and costs across different providers. Send traces to any OTLP-compatible collector (Jaeger, Tempo, Honeycomb, etc.) with custom authorization headers.
+
+### Quick Start
+
+```bash
+# Enable OTEL and point to your collector
+export OTEL_ENABLED=true
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318/v1/traces
+export OTEL_SERVICE_NAME=my-pi-agent
+
+# Run pi
+pi
+```
+
+### Features
+
+- **OTLP HTTP/JSON Export**: Compatible with all major observability platforms
+- **Custom Headers**: Support for authorization tokens and custom metadata
+- **LLM-Specific Attributes**: Automatic tracking of model, provider, tokens, and usage
+- **Zero Overhead When Disabled**: No performance impact when tracing is not enabled
+
+### Common Setups
+
+#### Local Jaeger
+
+```bash
+docker run -d --name jaeger \
+  -p 16686:16686 \
+  -p 4318:4318 \
+  jaegertracing/all-in-one:latest
+
+export OTEL_ENABLED=true
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318/v1/traces
+pi
+```
+
+View traces at http://localhost:16686
+
+#### Honeycomb
+
+```bash
+export OTEL_ENABLED=true
+export OTEL_EXPORTER_OTLP_ENDPOINT=https://api.honeycomb.io/v1/traces
+export OTEL_EXPORTER_OTLP_HEADERS="x-honeycomb-team=YOUR_API_KEY"
+pi
+```
+
+#### Other Platforms
+
+For Grafana, New Relic, Datadog, Lightstep, and more, see the [full OTEL configuration guide](../../docs/otel.md).
+
+### Trace Attributes
+
+Each LLM call includes:
+- Operation type and model details
+- Token usage (input, output, cache)
+- Performance metrics
+- Provider information
+
+See [docs/otel.md](../../docs/otel.md) for detailed configuration and examples.
 
 ---
 
