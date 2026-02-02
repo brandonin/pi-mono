@@ -15,12 +15,9 @@ async function cleanup() {
 	await shutdownOtel();
 }
 
-process.on("exit", () => {
-	// Note: async cleanup in exit handler has limitations
-	// For proper async cleanup, use beforeExit or SIGINT/SIGTERM
-	cleanup().catch(() => {
-		// Ignore errors during cleanup
-	});
+// Use beforeExit for async cleanup during normal termination
+process.on("beforeExit", async () => {
+	await cleanup();
 });
 
 process.on("SIGINT", async () => {

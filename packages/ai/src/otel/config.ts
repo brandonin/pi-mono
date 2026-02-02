@@ -147,16 +147,16 @@ export function getTracer(): Tracer | null {
  * Create a span for tracing
  * 
  * @param name - Span name
- * @param fn - Function to execute within the span
+ * @param fn - Function to execute within the span (receives null when OTEL is disabled)
  * @param attributes - Optional span attributes
  */
 export async function withSpan<T>(
 	name: string,
-	fn: (span: Span) => Promise<T>,
+	fn: (span: Span | null) => Promise<T>,
 	attributes?: Record<string, string | number | boolean>,
 ): Promise<T> {
 	if (!otelEnabled || !tracer) {
-		return fn(null as unknown as Span);
+		return fn(null);
 	}
 
 	return tracer.startActiveSpan(name, { attributes }, async (span) => {
@@ -181,16 +181,16 @@ export async function withSpan<T>(
  * Create a span for tracing (synchronous version)
  * 
  * @param name - Span name
- * @param fn - Function to execute within the span
+ * @param fn - Function to execute within the span (receives null when OTEL is disabled)
  * @param attributes - Optional span attributes
  */
 export function withSpanSync<T>(
 	name: string,
-	fn: (span: Span) => T,
+	fn: (span: Span | null) => T,
 	attributes?: Record<string, string | number | boolean>,
 ): T {
 	if (!otelEnabled || !tracer) {
-		return fn(null as unknown as Span);
+		return fn(null);
 	}
 
 	return tracer.startActiveSpan(name, { attributes }, (span) => {

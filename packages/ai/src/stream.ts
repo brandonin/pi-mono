@@ -24,6 +24,39 @@ function resolveApiProvider(api: Api) {
 	return provider;
 }
 
+/**
+ * Set common span attributes for LLM operations
+ */
+function setLlmSpanAttributes(
+	span: unknown,
+	model: Model<Api>,
+	context: Context,
+	result?: AssistantMessage,
+): void {
+	if (!span) return;
+
+	const s = span as { setAttribute: (key: string, value: string | number | boolean) => void };
+	s.setAttribute("llm.api", model.api);
+	s.setAttribute("llm.model", model.id);
+	s.setAttribute("llm.provider", model.provider);
+	if (context.systemPrompt) {
+		s.setAttribute("llm.system_prompt_length", context.systemPrompt.length);
+	}
+	s.setAttribute("llm.message_count", context.messages.length);
+
+	if (result?.usage) {
+		s.setAttribute("llm.usage.input_tokens", result.usage.input);
+		s.setAttribute("llm.usage.output_tokens", result.usage.output);
+		s.setAttribute("llm.usage.total_tokens", result.usage.totalTokens);
+		if (result.usage.cacheRead) {
+			s.setAttribute("llm.usage.cache_read_tokens", result.usage.cacheRead);
+		}
+		if (result.usage.cacheWrite) {
+			s.setAttribute("llm.usage.cache_write_tokens", result.usage.cacheWrite);
+		}
+	}
+}
+
 export function stream<TApi extends Api>(
 	model: Model<TApi>,
 	context: Context,
@@ -38,30 +71,9 @@ export function stream<TApi extends Api>(
 		return withSpan(
 			"llm.stream",
 			async (span) => {
-				if (span) {
-					span.setAttribute("llm.api", model.api);
-					span.setAttribute("llm.model", model.id);
-					span.setAttribute("llm.provider", model.provider);
-					if (context.systemPrompt) {
-						span.setAttribute("llm.system_prompt_length", context.systemPrompt.length);
-					}
-					span.setAttribute("llm.message_count", context.messages.length);
-				}
-
+				setLlmSpanAttributes(span, model, context);
 				const result = await originalResult();
-
-				if (span && result.usage) {
-					span.setAttribute("llm.usage.input_tokens", result.usage.input);
-					span.setAttribute("llm.usage.output_tokens", result.usage.output);
-					span.setAttribute("llm.usage.total_tokens", result.usage.totalTokens);
-					if (result.usage.cacheRead) {
-						span.setAttribute("llm.usage.cache_read_tokens", result.usage.cacheRead);
-					}
-					if (result.usage.cacheWrite) {
-						span.setAttribute("llm.usage.cache_write_tokens", result.usage.cacheWrite);
-					}
-				}
-
+				setLlmSpanAttributes(span, model, context, result);
 				return result;
 			},
 			{
@@ -81,31 +93,10 @@ export async function complete<TApi extends Api>(
 	return withSpan(
 		"llm.complete",
 		async (span) => {
-			if (span) {
-				span.setAttribute("llm.api", model.api);
-				span.setAttribute("llm.model", model.id);
-				span.setAttribute("llm.provider", model.provider);
-				if (context.systemPrompt) {
-					span.setAttribute("llm.system_prompt_length", context.systemPrompt.length);
-				}
-				span.setAttribute("llm.message_count", context.messages.length);
-			}
-
+			setLlmSpanAttributes(span, model, context);
 			const s = stream(model, context, options);
 			const result = await s.result();
-
-			if (span && result.usage) {
-				span.setAttribute("llm.usage.input_tokens", result.usage.input);
-				span.setAttribute("llm.usage.output_tokens", result.usage.output);
-				span.setAttribute("llm.usage.total_tokens", result.usage.totalTokens);
-				if (result.usage.cacheRead) {
-					span.setAttribute("llm.usage.cache_read_tokens", result.usage.cacheRead);
-				}
-				if (result.usage.cacheWrite) {
-					span.setAttribute("llm.usage.cache_write_tokens", result.usage.cacheWrite);
-				}
-			}
-
+			setLlmSpanAttributes(span, model, context, result);
 			return result;
 		},
 		{
@@ -128,30 +119,9 @@ export function streamSimple<TApi extends Api>(
 		return withSpan(
 			"llm.stream_simple",
 			async (span) => {
-				if (span) {
-					span.setAttribute("llm.api", model.api);
-					span.setAttribute("llm.model", model.id);
-					span.setAttribute("llm.provider", model.provider);
-					if (context.systemPrompt) {
-						span.setAttribute("llm.system_prompt_length", context.systemPrompt.length);
-					}
-					span.setAttribute("llm.message_count", context.messages.length);
-				}
-
+				setLlmSpanAttributes(span, model, context);
 				const result = await originalResult();
-
-				if (span && result.usage) {
-					span.setAttribute("llm.usage.input_tokens", result.usage.input);
-					span.setAttribute("llm.usage.output_tokens", result.usage.output);
-					span.setAttribute("llm.usage.total_tokens", result.usage.totalTokens);
-					if (result.usage.cacheRead) {
-						span.setAttribute("llm.usage.cache_read_tokens", result.usage.cacheRead);
-					}
-					if (result.usage.cacheWrite) {
-						span.setAttribute("llm.usage.cache_write_tokens", result.usage.cacheWrite);
-					}
-				}
-
+				setLlmSpanAttributes(span, model, context, result);
 				return result;
 			},
 			{
@@ -171,31 +141,10 @@ export async function completeSimple<TApi extends Api>(
 	return withSpan(
 		"llm.complete_simple",
 		async (span) => {
-			if (span) {
-				span.setAttribute("llm.api", model.api);
-				span.setAttribute("llm.model", model.id);
-				span.setAttribute("llm.provider", model.provider);
-				if (context.systemPrompt) {
-					span.setAttribute("llm.system_prompt_length", context.systemPrompt.length);
-				}
-				span.setAttribute("llm.message_count", context.messages.length);
-			}
-
+			setLlmSpanAttributes(span, model, context);
 			const s = streamSimple(model, context, options);
 			const result = await s.result();
-
-			if (span && result.usage) {
-				span.setAttribute("llm.usage.input_tokens", result.usage.input);
-				span.setAttribute("llm.usage.output_tokens", result.usage.output);
-				span.setAttribute("llm.usage.total_tokens", result.usage.totalTokens);
-				if (result.usage.cacheRead) {
-					span.setAttribute("llm.usage.cache_read_tokens", result.usage.cacheRead);
-				}
-				if (result.usage.cacheWrite) {
-					span.setAttribute("llm.usage.cache_write_tokens", result.usage.cacheWrite);
-				}
-			}
-
+			setLlmSpanAttributes(span, model, context, result);
 			return result;
 		},
 		{
