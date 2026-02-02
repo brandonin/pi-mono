@@ -2,6 +2,7 @@ import "./providers/register-builtins.js";
 import "./utils/http-proxy.js";
 
 import { getApiProvider } from "./api-registry.js";
+import { withSpan, setSpanAttributes } from "./otel/index.js";
 import type {
 	Api,
 	AssistantMessage,
@@ -29,7 +30,47 @@ export function stream<TApi extends Api>(
 	options?: ProviderStreamOptions,
 ): AssistantMessageEventStream {
 	const provider = resolveApiProvider(model.api);
-	return provider.stream(model, context, options as StreamOptions);
+	const eventStream = provider.stream(model, context, options as StreamOptions);
+
+	// Add OpenTelemetry tracing
+	const originalResult = eventStream.result.bind(eventStream);
+	eventStream.result = async () => {
+		return withSpan(
+			"llm.stream",
+			async (span) => {
+				if (span) {
+					span.setAttribute("llm.api", model.api);
+					span.setAttribute("llm.model", model.id);
+					span.setAttribute("llm.provider", model.provider);
+					if (context.systemPrompt) {
+						span.setAttribute("llm.system_prompt_length", context.systemPrompt.length);
+					}
+					span.setAttribute("llm.message_count", context.messages.length);
+				}
+
+				const result = await originalResult();
+
+				if (span && result.usage) {
+					span.setAttribute("llm.usage.input_tokens", result.usage.input);
+					span.setAttribute("llm.usage.output_tokens", result.usage.output);
+					span.setAttribute("llm.usage.total_tokens", result.usage.totalTokens);
+					if (result.usage.cacheRead) {
+						span.setAttribute("llm.usage.cache_read_tokens", result.usage.cacheRead);
+					}
+					if (result.usage.cacheWrite) {
+						span.setAttribute("llm.usage.cache_write_tokens", result.usage.cacheWrite);
+					}
+				}
+
+				return result;
+			},
+			{
+				"llm.operation": "stream",
+			},
+		);
+	};
+
+	return eventStream;
 }
 
 export async function complete<TApi extends Api>(
@@ -37,8 +78,40 @@ export async function complete<TApi extends Api>(
 	context: Context,
 	options?: ProviderStreamOptions,
 ): Promise<AssistantMessage> {
-	const s = stream(model, context, options);
-	return s.result();
+	return withSpan(
+		"llm.complete",
+		async (span) => {
+			if (span) {
+				span.setAttribute("llm.api", model.api);
+				span.setAttribute("llm.model", model.id);
+				span.setAttribute("llm.provider", model.provider);
+				if (context.systemPrompt) {
+					span.setAttribute("llm.system_prompt_length", context.systemPrompt.length);
+				}
+				span.setAttribute("llm.message_count", context.messages.length);
+			}
+
+			const s = stream(model, context, options);
+			const result = await s.result();
+
+			if (span && result.usage) {
+				span.setAttribute("llm.usage.input_tokens", result.usage.input);
+				span.setAttribute("llm.usage.output_tokens", result.usage.output);
+				span.setAttribute("llm.usage.total_tokens", result.usage.totalTokens);
+				if (result.usage.cacheRead) {
+					span.setAttribute("llm.usage.cache_read_tokens", result.usage.cacheRead);
+				}
+				if (result.usage.cacheWrite) {
+					span.setAttribute("llm.usage.cache_write_tokens", result.usage.cacheWrite);
+				}
+			}
+
+			return result;
+		},
+		{
+			"llm.operation": "complete",
+		},
+	);
 }
 
 export function streamSimple<TApi extends Api>(
@@ -47,7 +120,47 @@ export function streamSimple<TApi extends Api>(
 	options?: SimpleStreamOptions,
 ): AssistantMessageEventStream {
 	const provider = resolveApiProvider(model.api);
-	return provider.streamSimple(model, context, options);
+	const eventStream = provider.streamSimple(model, context, options);
+
+	// Add OpenTelemetry tracing
+	const originalResult = eventStream.result.bind(eventStream);
+	eventStream.result = async () => {
+		return withSpan(
+			"llm.stream_simple",
+			async (span) => {
+				if (span) {
+					span.setAttribute("llm.api", model.api);
+					span.setAttribute("llm.model", model.id);
+					span.setAttribute("llm.provider", model.provider);
+					if (context.systemPrompt) {
+						span.setAttribute("llm.system_prompt_length", context.systemPrompt.length);
+					}
+					span.setAttribute("llm.message_count", context.messages.length);
+				}
+
+				const result = await originalResult();
+
+				if (span && result.usage) {
+					span.setAttribute("llm.usage.input_tokens", result.usage.input);
+					span.setAttribute("llm.usage.output_tokens", result.usage.output);
+					span.setAttribute("llm.usage.total_tokens", result.usage.totalTokens);
+					if (result.usage.cacheRead) {
+						span.setAttribute("llm.usage.cache_read_tokens", result.usage.cacheRead);
+					}
+					if (result.usage.cacheWrite) {
+						span.setAttribute("llm.usage.cache_write_tokens", result.usage.cacheWrite);
+					}
+				}
+
+				return result;
+			},
+			{
+				"llm.operation": "stream_simple",
+			},
+		);
+	};
+
+	return eventStream;
 }
 
 export async function completeSimple<TApi extends Api>(
@@ -55,6 +168,38 @@ export async function completeSimple<TApi extends Api>(
 	context: Context,
 	options?: SimpleStreamOptions,
 ): Promise<AssistantMessage> {
-	const s = streamSimple(model, context, options);
-	return s.result();
+	return withSpan(
+		"llm.complete_simple",
+		async (span) => {
+			if (span) {
+				span.setAttribute("llm.api", model.api);
+				span.setAttribute("llm.model", model.id);
+				span.setAttribute("llm.provider", model.provider);
+				if (context.systemPrompt) {
+					span.setAttribute("llm.system_prompt_length", context.systemPrompt.length);
+				}
+				span.setAttribute("llm.message_count", context.messages.length);
+			}
+
+			const s = streamSimple(model, context, options);
+			const result = await s.result();
+
+			if (span && result.usage) {
+				span.setAttribute("llm.usage.input_tokens", result.usage.input);
+				span.setAttribute("llm.usage.output_tokens", result.usage.output);
+				span.setAttribute("llm.usage.total_tokens", result.usage.totalTokens);
+				if (result.usage.cacheRead) {
+					span.setAttribute("llm.usage.cache_read_tokens", result.usage.cacheRead);
+				}
+				if (result.usage.cacheWrite) {
+					span.setAttribute("llm.usage.cache_write_tokens", result.usage.cacheWrite);
+				}
+			}
+
+			return result;
+		},
+		{
+			"llm.operation": "complete_simple",
+		},
+	);
 }
