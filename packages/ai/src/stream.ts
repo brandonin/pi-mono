@@ -1,6 +1,7 @@
 import "./providers/register-builtins.js";
 import "./utils/http-proxy.js";
 
+import type { Span } from "@opentelemetry/api";
 import { getApiProvider } from "./api-registry.js";
 import { withSpan, setSpanAttributes } from "./otel/index.js";
 import type {
@@ -28,31 +29,30 @@ function resolveApiProvider(api: Api) {
  * Set common span attributes for LLM operations
  */
 function setLlmSpanAttributes(
-	span: unknown,
+	span: Span | null,
 	model: Model<Api>,
 	context: Context,
 	result?: AssistantMessage,
 ): void {
 	if (!span) return;
 
-	const s = span as { setAttribute: (key: string, value: string | number | boolean) => void };
-	s.setAttribute("llm.api", model.api);
-	s.setAttribute("llm.model", model.id);
-	s.setAttribute("llm.provider", model.provider);
+	span.setAttribute("llm.api", model.api);
+	span.setAttribute("llm.model", model.id);
+	span.setAttribute("llm.provider", model.provider);
 	if (context.systemPrompt) {
-		s.setAttribute("llm.system_prompt_length", context.systemPrompt.length);
+		span.setAttribute("llm.system_prompt_length", context.systemPrompt.length);
 	}
-	s.setAttribute("llm.message_count", context.messages.length);
+	span.setAttribute("llm.message_count", context.messages.length);
 
 	if (result?.usage) {
-		s.setAttribute("llm.usage.input_tokens", result.usage.input);
-		s.setAttribute("llm.usage.output_tokens", result.usage.output);
-		s.setAttribute("llm.usage.total_tokens", result.usage.totalTokens);
+		span.setAttribute("llm.usage.input_tokens", result.usage.input);
+		span.setAttribute("llm.usage.output_tokens", result.usage.output);
+		span.setAttribute("llm.usage.total_tokens", result.usage.totalTokens);
 		if (result.usage.cacheRead) {
-			s.setAttribute("llm.usage.cache_read_tokens", result.usage.cacheRead);
+			span.setAttribute("llm.usage.cache_read_tokens", result.usage.cacheRead);
 		}
 		if (result.usage.cacheWrite) {
-			s.setAttribute("llm.usage.cache_write_tokens", result.usage.cacheWrite);
+			span.setAttribute("llm.usage.cache_write_tokens", result.usage.cacheWrite);
 		}
 	}
 }

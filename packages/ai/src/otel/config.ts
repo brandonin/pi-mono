@@ -81,7 +81,7 @@ export function initializeOtel(config?: OtelConfig): void {
 	}
 
 	const serviceName = config?.serviceName || process.env.OTEL_SERVICE_NAME || "pi-ai";
-	const serviceVersion = config?.serviceVersion || process.env.OTEL_SERVICE_VERSION || "unknown";
+	const serviceVersion = config?.serviceVersion || process.env.OTEL_SERVICE_VERSION || "unspecified";
 
 	try {
 		// Create resource with service information
